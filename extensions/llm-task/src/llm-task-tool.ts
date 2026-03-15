@@ -1,5 +1,7 @@
+import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { Type } from "@sinclair/typebox";
 import Ajv from "ajv";
 import {
@@ -17,23 +19,31 @@ import type { OpenClawPluginApi } from "openclaw/plugin-sdk/llm-task";
 
 type RunEmbeddedPiAgentFn = (params: Record<string, unknown>) => Promise<unknown>;
 
-async function loadRunEmbeddedPiAgent(): Promise<RunEmbeddedPiAgentFn> {
-  // Source checkout (tests/dev)
-  try {
-    const mod = await import("../../../src/agents/pi-embedded-runner.js");
-    // oxlint-disable-next-line typescript/no-explicit-any
-    if (typeof (mod as any).runEmbeddedPiAgent === "function") {
-      // oxlint-disable-next-line typescript/no-explicit-any
-      return (mod as any).runEmbeddedPiAgent;
+function resolveExtensionApiModulePath(): string {
+  let cursor = path.dirname(fileURLToPath(import.meta.url));
+  for (let i = 0; i < 8; i += 1) {
+    const sourceCandidate = path.join(cursor, "src", "extensionAPI.ts");
+    if (fsSync.existsSync(sourceCandidate)) {
+      return pathToFileURL(sourceCandidate).href;
     }
-  } catch {
-    // ignore
+
+    const distCandidate = path.join(cursor, "dist", "extensionAPI.js");
+    if (fsSync.existsSync(distCandidate)) {
+      return pathToFileURL(distCandidate).href;
+    }
+
+    const parent = path.dirname(cursor);
+    if (parent === cursor) {
+      break;
+    }
+    cursor = parent;
   }
 
-  // Bundled install (built)
-  // NOTE: there is no src/ tree in a packaged install. Prefer a stable internal entrypoint.
-  const distExtensionApi = "../../../dist/extensionAPI.js";
-  const mod = (await import(distExtensionApi)) as { runEmbeddedPiAgent?: unknown };
+  throw new Error("Internal error: could not resolve OpenClaw extensionAPI module.");
+}
+
+async function loadRunEmbeddedPiAgent(): Promise<RunEmbeddedPiAgentFn> {
+  const mod = (await import(resolveExtensionApiModulePath())) as { runEmbeddedPiAgent?: unknown };
   // oxlint-disable-next-line typescript/no-explicit-any
   const fn = (mod as any).runEmbeddedPiAgent;
   if (typeof fn !== "function") {
