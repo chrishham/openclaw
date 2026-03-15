@@ -1,6 +1,9 @@
 import {
   applyAccountNameToChannelSection,
   buildChannelConfigSchema,
+  buildAccountScopedDmSecurityPolicy,
+  collectAllowlistProviderGroupPolicyWarnings,
+  collectOpenGroupPolicyRouteAllowlistWarnings,
   createActionGate,
   createWhatsAppOutboundBase,
   DEFAULT_ACCOUNT_ID,
@@ -24,11 +27,6 @@ import {
   type ChannelMessageActionName,
   type ChannelPlugin,
 } from "openclaw/plugin-sdk/whatsapp";
-import {
-  collectAllowlistProviderGroupPolicyWarnings,
-  collectOpenGroupPolicyRouteAllowlistWarnings,
-} from "../../../src/channels/plugins/group-policy-warnings.js";
-import { buildAccountScopedDmSecurityPolicy } from "../../../src/channels/plugins/helpers.js";
 // WhatsApp-specific imports from local extension code (moved from src/web/ and src/channels/plugins/)
 import {
   listWhatsAppAccountIds,

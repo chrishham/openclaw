@@ -19,17 +19,25 @@ import type { OpenClawPluginApi } from "openclaw/plugin-sdk/llm-task";
 
 type RunEmbeddedPiAgentFn = (params: Record<string, unknown>) => Promise<unknown>;
 
+let cachedExtensionApiModulePath: string | null = null;
+
 function resolveExtensionApiModulePath(): string {
+  if (cachedExtensionApiModulePath) {
+    return cachedExtensionApiModulePath;
+  }
+
   let cursor = path.dirname(fileURLToPath(import.meta.url));
   for (let i = 0; i < 8; i += 1) {
     const sourceCandidate = path.join(cursor, "src", "extensionAPI.ts");
     if (fsSync.existsSync(sourceCandidate)) {
-      return pathToFileURL(sourceCandidate).href;
+      cachedExtensionApiModulePath = pathToFileURL(sourceCandidate).href;
+      return cachedExtensionApiModulePath;
     }
 
     const distCandidate = path.join(cursor, "dist", "extensionAPI.js");
     if (fsSync.existsSync(distCandidate)) {
-      return pathToFileURL(distCandidate).href;
+      cachedExtensionApiModulePath = pathToFileURL(distCandidate).href;
+      return cachedExtensionApiModulePath;
     }
 
     const parent = path.dirname(cursor);
