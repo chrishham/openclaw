@@ -6,11 +6,14 @@ import {
   addExtensionChannelRegistration,
   addExtensionCliRegistration,
   addExtensionCommandRegistration,
+  addExtensionContextEngineRegistration,
   addExtensionGatewayMethodRegistration,
+  addExtensionLegacyHookRegistration,
   addExtensionHttpRouteRegistration,
   addExtensionProviderRegistration,
   addExtensionServiceRegistration,
   addExtensionToolRegistration,
+  addExtensionTypedHookRegistration,
 } from "../extension-host/registry-writes.js";
 import {
   resolveExtensionChannelRegistration,
@@ -255,12 +258,12 @@ export function createPluginRegistry(registryParams: PluginRegistryParams) {
       });
       return;
     }
-    record.hookNames.push(normalized.hookName);
-    registry.hooks.push({
-      pluginId: normalized.entry.pluginId,
-      entry: normalized.entry.entry,
+    addExtensionLegacyHookRegistration({
+      registry,
+      record,
+      hookName: normalized.hookName,
+      entry: normalized.entry,
       events: normalized.events,
-      source: normalized.entry.source,
     });
 
     const hookSystemEnabled = config?.hooks?.internal?.enabled === true;
@@ -513,13 +516,16 @@ export function createPluginRegistry(registryParams: PluginRegistryParams) {
         ) as PluginHookHandlerMap[K];
       }
     }
-    record.hookCount += 1;
-    registry.typedHooks.push({
-      ...normalized.entry,
-      pluginId: record.id,
-      hookName: normalized.hookName,
-      handler: effectiveHandler,
-    } as TypedPluginHookRegistration);
+    addExtensionTypedHookRegistration({
+      registry,
+      record,
+      entry: {
+        ...normalized.entry,
+        pluginId: record.id,
+        hookName: normalized.hookName,
+        handler: effectiveHandler,
+      } as TypedPluginHookRegistration,
+    });
   };
 
   const normalizeLogger = (logger: PluginLogger): PluginLogger => ({
@@ -571,7 +577,10 @@ export function createPluginRegistry(registryParams: PluginRegistryParams) {
           });
           return;
         }
-        registerContextEngine(result.entry.engineId, result.entry.factory);
+        addExtensionContextEngineRegistration({
+          entry: result.entry,
+          registerEngine: registerContextEngine,
+        });
       },
       resolvePath: (input: string) => resolveUserPath(input),
       on: (hookName, handler, opts) =>
